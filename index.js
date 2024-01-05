@@ -4,6 +4,9 @@ const app = express()
 const bodyParser = require('body-parser')
 app.use(bodyParser.json())
 
+const dotenv = require('dotenv')
+dotenv.config()
+
 app.post('/webhook', (req, res) => {
     const request = req.body
     console.log(request)
@@ -20,9 +23,9 @@ app.post('/webhook', (req, res) => {
 
     const CardInfo = {
         name: `${call.employee} - ${call.problem}`,
-        desc: `## ${call.description} \n\n**Funcionário:** ${call.employee}\n**Tipo de problema:** ${call.problem}\n**Prioridade:**${call.priority}\n**Local:** ${call.place}\n\n*###### Arthur automatizações vrum vrum`
+        desc: `## ${call.description} \n---\n**Funcionário:** ${call.employee}\n**Tipo de problema:** ${call.problem}\n**Prioridade:**${call.priority}\n**Local:** ${call.place}\n> *Arthur automatizações vrum vrum*`
     }
-    console.log(fetch(`https://api.trello.com/1/cards?idList=${process.env.TRELLO_IDLIST}&key=${process.env.TRELLO_APIKEY}&token=${process.env.TRELLO_APITOKEN}`, {
+    fetch(`https://api.trello.com/1/cards?idList=${process.env.TRELLO_IDLIST}&key=${process.env.TRELLO_APIKEY}&token=${process.env.TRELLO_APITOKEN}`, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -37,7 +40,7 @@ app.post('/webhook', (req, res) => {
             return response.text();
         })
         .then(text => console.log(text))
-        .catch(err => console.error(err)))
+        .catch(err => console.error(err))
 
     res.status(200).send("OK")
 })
