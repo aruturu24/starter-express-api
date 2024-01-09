@@ -31,7 +31,7 @@ app.post('/webhook', async (req, res) => {
     const cardInfo = createCardInfo(call)
     const TrelloCard = await fetchApiTrello("cards", cardInfo)
 
-    if (call.problem !== "Solicitação de equipamento para auditoria") {
+    if (call.problem == "Solicitação de equipamento para auditoria") {
         const equipments = [
             call.tablets + ' tablets',
             call.thermal.reduce((acc, cur) => {return acc + parseInt(cur)}, 0) + ' Termovisores',
