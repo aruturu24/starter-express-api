@@ -6,6 +6,8 @@ app.use(bodyParser.json())
 
 const dotenv = require('dotenv')
 const {response} = require("express");
+const {GoogleSpreadsheet} = require("google-spreadsheet");
+const {JWT} = require("google-auth-library");
 dotenv.config()
 
 app.post('/webhook', async (req, res) => {
@@ -45,6 +47,27 @@ app.post('/webhook', async (req, res) => {
 
 })
 
+app.post('/updateSheets', async (req, res) => {
+    const request = req.body
+
+    if (request.action.display.translationKey !== 'action_move_card_from_list_to_list') {
+        res.status(400).send('Is not a card move in Trello')
+    } else if (request.action.display.listAfter.text !== 'Chamados Realizados') {
+        res.status(400).send('Is not the right list')
+    }
+
+    const CardId = request.action.display.entities.card.id
+    const CardTrello = await fetchApiTrello(`cards/${CardId}`, {}, 'GET')
+
+    const Sheet = await prepareCallSheet()
+    const IsStatusChanged = changeCallStatus(Sheet, CardTrello.desc, "Concluído")
+    if (!IsStatusChanged) res.status(400).send('Can not find the specified call in the sheet')
+
+    await Sheet.saveUpdatedCells();
+
+    res.status(200).send('Sheet updated!')
+
+})
 
 app.all('/', (req, res) => {
     console.log("Just got a request!")
@@ -66,7 +89,7 @@ function createCardInfo(call) {
             idList: process.env.TRELLO_IDLIST,
             name: `${call.employee} - ${call.problem}`,
             desc:
-                `## ${call.description} \n---\n` +
+                `## ${call.description}\n---\n` +
                 `**Funcionário:** ${call.employee}\n` +
                 `**Tipo de problema:** ${call.problem}\n` +
                 `**Prioridade:**${call.priority}\n` +
@@ -78,7 +101,7 @@ function createCardInfo(call) {
             idList: process.env.TRELLO_IDLIST,
             name: `${call.employee} - ${call.problem}`,
             desc:
-                `## Cliente: **${call.client}** \n---\n` +
+                `## Cliente: **${call.client}**\n---\n` +
                 `**Tablets:** ${call.tablets[0]}\n` +
                 `**Termovisores:** ${parseInt(call.thermal[0]) + parseInt(call.thermal[1]) + parseInt(call.thermal[2])}\n` +
                 `**Trena Digital:** ${call.digitalmeasure[0]}\n` +
@@ -93,9 +116,9 @@ function createCardInfo(call) {
     }
 }
 
-async function fetchApiTrello(path, body) {
+async function fetchApiTrello(path, body, method = 'POST') {
     const response = await fetch(`https://api.trello.com/1/${path}?key=${process.env.TRELLO_APIKEY}&token=${process.env.TRELLO_APITOKEN}`, {
-        method: 'POST',
+        method: method,
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
@@ -110,4 +133,45 @@ async function fetchApiTrello(path, body) {
         `Response: ${response.status} ${response.statusText}`
     )
     return JSON.parse(TrelloCard)
+}
+
+async function prepareCallSheet() {
+    const serviceAccountAuth = new JWT({
+        email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+        scopes: [
+            'https://www.googleapis.com/auth/spreadsheets',
+        ],
+    });
+
+    const doc = new GoogleSpreadsheet(process.env.SPREADSHEET_CALLS_ID, serviceAccountAuth);
+    await doc.loadInfo();
+
+    const sheet = doc.sheetsById[process.env.SHEET_CALLS_ID]
+    await sheet.loadCells(`K${process.env.SHEET_START_ROW}:AM${process.env.SHEET_END_ROW}`)
+    return sheet
+}
+
+function changeCallStatus(sheet, desc, status) {
+    if (desc.startsWith('## Cliente:')) {
+        const description = desc.slice(14).split('*')[0]
+
+        for (let i = process.env.SHEET_START_ROW; i < process.env.SHEET_END_ROW; i++) {
+            if (sheet.getCellByA1(`M${i}`).value === description) {
+                sheet.getCellByA1(`AL${i}`).value = status
+                return true;
+            }
+        }
+    }
+    const description = desc.slice(3).split(' \n---')[0]
+
+    for (let i = process.env.SHEET_START_ROW; i < process.env.SHEET_END_ROW; i++) {
+        if (sheet.getCellByA1(`AJ${i}`).value === description) {
+            sheet.getCellByA1(`AL${i}`).value = status
+            return true
+        }
+    }
+
+    console.error(new Error(''))
+    return false
 }
