@@ -65,7 +65,9 @@ app.post('/updateSheets', async (req, res) => {
 
     const Sheet = await prepareCallSheet()
     const IsStatusChanged = changeCallStatus(Sheet, CardTrello.desc, "Concluído")
-    if (!IsStatusChanged) res.status(400).send('Can not find the specified call in the sheet')
+    if (IsStatusChanged === false) {
+        res.status(400).send('Can not find the specified call in the sheet')
+    }
 
     await Sheet.saveUpdatedCells();
 
