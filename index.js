@@ -47,6 +47,10 @@ app.post('/webhook', async (req, res) => {
 
 })
 
+app.head('/updateSheets', async (req, res) => {
+    const request = req.body
+    res.status(200).send('Webhook connected!')
+})
 app.post('/updateSheets', async (req, res) => {
     const request = req.body
 
