@@ -56,7 +56,7 @@ app.post('/updateSheets', async (req, res) => {
 
     if (request.action.display.translationKey !== 'action_move_card_from_list_to_list') {
         res.status(400).send('Is not a card move in Trello')
-    } else if (request.action.listAfter.name !== 'Chamados Realizados') {
+    } else if (request.action.data.listAfter.name !== 'Chamados Realizados') {
         res.status(400).send('Is not the right list')
     }
 
