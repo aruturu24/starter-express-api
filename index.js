@@ -157,25 +157,26 @@ async function prepareCallSheet() {
 }
 
 function changeCallStatus(sheet, desc, status) {
+    let wasFound = false
     if (desc.startsWith('## Cliente:')) {
         const description = desc.slice(14).split('*')[0]
 
         for (let i = process.env.SHEET_START_ROW; i < process.env.SHEET_END_ROW; i++) {
             if (sheet.getCellByA1(`M${i}`).value === description) {
                 sheet.getCellByA1(`AL${i}`).value = status
-                return true;
+                wasFound = true;
             }
         }
+        return wasFound
     }
     const description = desc.slice(3).split(' \n---')[0]
 
     for (let i = process.env.SHEET_START_ROW; i < process.env.SHEET_END_ROW; i++) {
         if (sheet.getCellByA1(`AJ${i}`).value === description) {
             sheet.getCellByA1(`AL${i}`).value = status
-            return true
+            wasFound = true
         }
     }
 
-    console.error(new Error(''))
-    return false
+    return wasFound
 }
