@@ -55,9 +55,9 @@ app.post('/updateSheets', async (req, res) => {
     const request = req.body
 
     if (request.action.display.translationKey !== 'action_move_card_from_list_to_list') {
-        res.status(400).send('Is not a card move in Trello')
+        return res.status(400).send('Is not a card move in Trello')
     } else if (request.action.data.listAfter.name !== 'Chamados Realizados') {
-        res.status(400).send('Is not the right list')
+        return res.status(400).send('Is not the right list')
     }
 
     const CardId = request.action.display.entities.card.id
@@ -66,7 +66,7 @@ app.post('/updateSheets', async (req, res) => {
     const Sheet = await prepareCallSheet()
     const IsStatusChanged = changeCallStatus(Sheet, CardTrello.desc, "Concluído")
     if (IsStatusChanged === false) {
-        res.status(400).send('Can not find the specified call in the sheet')
+        return res.status(400).send('Can not find the specified call in the sheet')
     }
 
     await Sheet.saveUpdatedCells();
