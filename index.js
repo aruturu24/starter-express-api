@@ -171,7 +171,7 @@ function changeCallStatus(sheet, desc, status) {
         }
         return wasFound
     }
-    const description = desc.slice(3).split(' \n---')[0]
+    const description = desc.slice(3).split('\n')[0]
 
     for (let i = process.env.SHEET_START_ROW; i < process.env.SHEET_END_ROW; i++) {
         if (sheet.getCellByA1(`AJ${i}`).value === description) {
