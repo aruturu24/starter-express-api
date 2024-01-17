@@ -61,7 +61,7 @@ app.post('/updateSheets', async (req, res) => {
     }
 
     const CardId = request.action.display.entities.card.id
-    const CardTrello = await fetchApiTrello(`cards/${CardId}`, {}, 'GET')
+    const CardTrello = await fetchApiTrello(`cards/${CardId}`, null,'GET')
 
     const Sheet = await prepareCallSheet()
     const IsStatusChanged = changeCallStatus(Sheet, CardTrello.desc, "Concluído")
@@ -127,7 +127,7 @@ async function fetchApiTrello(path, body, method = 'POST') {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body)
+        body: body ? JSON.stringify(body) : null
     })
 
     const TrelloCard = await response.text()
