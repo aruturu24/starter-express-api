@@ -42,7 +42,7 @@ app.post('/webhook', async (req, res) => {
             ...call.electric, ...call.civil, ...call.mechanic, ...call.epi
         ]
 
-        await createChecklist(TrelloCard.id, "Equipamentos", equipments)
+        await createChecklist(TrelloCard.id, { name: "Equipamentos", items: equipments})
     }
 
     res.status(200).send(call)
