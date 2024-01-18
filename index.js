@@ -5,10 +5,10 @@ const bodyParser = require('body-parser')
 app.use(bodyParser.json())
 
 const dotenv = require('dotenv')
-const {response} = require("express");
+dotenv.config()
+
 const {GoogleSpreadsheet} = require("google-spreadsheet");
 const {JWT} = require("google-auth-library");
-dotenv.config()
 
 app.post('/webhook', async (req, res) => {
     const request = req.body
@@ -21,72 +21,65 @@ app.post('/webhook', async (req, res) => {
         client: request["Cliente:"],
         tablets: request["Tablets:"],
         thermal: request["Termovisores:"],
-        digitalmeasure: request["Trena Digital:"],
-        eletric: request["Elétrica"],
+        digital_measure: request["Trena Digital:"],
+        electric: request["Elétrica"],
         civil: request["Civil"],
-        mech: request["Mecânica"],
+        mechanic: request["Mecânica"],
         epi: request["EPI'S"],
         date: request["Data e hora da Retirada"],
         description: request["Descrição:"]
     }
 
-    const cardInfo = createCardInfo(call)
-    const TrelloCard = await fetchApiTrello("cards", cardInfo)
+    const TrelloCard = await fetchApiTrello("cards", createCardInfo(call))
 
-    if (call.problem == "Solicitação de equipamento para auditoria") {
+    if (call.problem === "Solicitação de equipamento para auditoria") {
         const equipments = [
             call.tablets + ' tablets',
-            call.thermal.reduce((acc, cur) => {return acc + parseInt(cur)}, 0) + ' Termovisores',
-            call.digitalmeasure + ' Trenas digital',
-            ...call.eletric, ...call.civil, ...call.mech, ...call.epi
+            call.thermal.reduce((acc, cur) => {
+                return acc + parseInt(cur)
+            }, 0) + ' Termovisores',
+            call.digital_measure + ' Trenas digital',
+            ...call.electric, ...call.civil, ...call.mechanic, ...call.epi
         ]
+
         await createChecklist(TrelloCard.id, "Equipamentos", equipments)
     }
 
     res.status(200).send(call)
-
 })
-
 app.head('/updateSheets', async (req, res) => {
-    const request = req.body
     res.status(200).send('Webhook connected!')
 })
 app.post('/updateSheets', async (req, res) => {
     const request = req.body
 
-    if (request.action.display.translationKey !== 'action_move_card_from_list_to_list') {
-        return res.status(400).send('Is not a card move in Trello')
-    } else if (request.action.data.listAfter.name !== 'Chamados Realizados') {
-        return res.status(400).send('Is not the right list')
-    }
+    if (request.action.display.translationKey !== 'action_move_card_from_list_to_list') return res.status(400).send('Is not a card move in Trello')
+    if (request.action.data.listAfter.name !== 'Chamados Realizados') return res.status(400).send('Is not the right list')
 
-    const CardId = request.action.display.entities.card.id
-    const CardTrello = await fetchApiTrello(`cards/${CardId}`, null,'GET')
+    const CardTrello = await fetchApiTrello(`cards/${request.action.display.entities.card.id}`, null, 'GET')
 
     const Sheet = await prepareCallSheet()
     const IsStatusChanged = changeCallStatus(Sheet, CardTrello.desc, "Concluído")
-    if (IsStatusChanged === false) {
-        return res.status(400).send('Can not find the specified call in the sheet')
-    }
-
+    if (IsStatusChanged === false) return res.status(400).send('Can not find the specified call in the sheet')
+    console.log('Saving sheet alterations...')
     await Sheet.saveUpdatedCells();
 
     res.status(200).send('Sheet updated!')
-
 })
-
 app.all('/', (req, res) => {
     console.log("Just got a request!")
     res.send('Yo!')
 })
 app.listen(process.env.PORT || 3000)
 
-async function createChecklist(cardId, checklistName, checklistItems) {
-    const TrelloChecklist = await fetchApiTrello("checklists", {idCard: cardId, name: checklistName})
+async function createChecklist(cardId, checklist) {
+    const TrelloChecklist = await fetchApiTrello("checklists", {idCard: cardId, name: checklist.name})
 
-    for (const item of checklistItems) {
-        await fetchApiTrello(`checklists/${TrelloChecklist.id}/checkItems`, {name: item, checked: false})
-    }
+    console.log('Creating the Checklist')
+    for (const item of checklist.items) await fetchApiTrello(`checklists/${TrelloChecklist.id}/checkItems`, {
+        name: item,
+        checked: false
+    })
 }
 
 function createCardInfo(call) {
@@ -98,27 +91,27 @@ function createCardInfo(call) {
                 `## ${call.description}\n---\n` +
                 `**Funcionário:** ${call.employee}\n` +
                 `**Tipo de problema:** ${call.problem}\n` +
-                `**Prioridade:**${call.priority}\n` +
+                `**Prioridade:** ${call.priority}\n` +
                 `**Local:** ${call.place}\n` +
                 `> *Arthur automatizações vrum vrum*`
         }
-    } else {
-        return {
-            idList: process.env.TRELLO_IDLIST,
-            name: `${call.employee} - ${call.problem}`,
-            desc:
-                `## Cliente: **${call.client}**\n---\n` +
-                `**Tablets:** ${call.tablets[0]}\n` +
-                `**Termovisores:** ${parseInt(call.thermal[0]) + parseInt(call.thermal[1]) + parseInt(call.thermal[2])}\n` +
-                `**Trena Digital:** ${call.digitalmeasure[0]}\n` +
-                `**Elétrica:**\n${call.eletric.map((item) => " " + item)}\n` +
-                `**Civil:**\n${call.civil.map(item => " " + item)}\n` +
-                `**Mecânica:**\n${call.mech.map(item => " " + item)}\n` +
-                `**EPI's:**\n${call.epi.map(item => " " + item)}\n` +
-                `**Data e Hora da Retirada:** ${call.date}\n` +
-                `> *Arthur automatizações vrum vrum*`,
-            due: new Date(call.date).toISOString()
-        }
+    }
+
+    return {
+        idList: process.env.TRELLO_IDLIST,
+        name: `${call.employee} - ${call.problem}`,
+        desc:
+            `## Cliente: **${call.client}**\n---\n` +
+            `**Tablets:** ${call.tablets[0]}\n` +
+            `**Termovisores:** ${parseInt(call.thermal[0]) + parseInt(call.thermal[1]) + parseInt(call.thermal[2])}\n` +
+            `**Trena Digital:** ${call.digital_measure[0]}\n` +
+            `**Elétrica:**\n${call.electric.map((item) => " " + item)}\n` +
+            `**Civil:**\n${call.civil.map(item => " " + item)}\n` +
+            `**Mecânica:**\n${call.mechanic.map(item => " " + item)}\n` +
+            `**EPI's:**\n${call.epi.map(item => " " + item)}\n` +
+            `**Data e Hora da Retirada:** ${call.date}\n` +
+            `> *Arthur automatizações vrum vrum*`,
+        due: new Date(call.date).toISOString()
     }
 }
 
@@ -132,13 +125,12 @@ async function fetchApiTrello(path, body, method = 'POST') {
         body: body ? JSON.stringify(body) : null
     })
 
-    const TrelloCard = await response.text()
-
     console.log(
         `Fetching: Trello/${path}\n`,
         `Response: ${response.status} ${response.statusText}`
     )
-    return JSON.parse(TrelloCard)
+
+    return JSON.parse(await response.text())
 }
 
 async function prepareCallSheet() {
@@ -150,6 +142,7 @@ async function prepareCallSheet() {
         ],
     });
 
+    console.log('Loading calls sheet')
     const doc = new GoogleSpreadsheet(process.env.SPREADSHEET_CALLS_ID, serviceAccountAuth);
     await doc.loadInfo();
 
