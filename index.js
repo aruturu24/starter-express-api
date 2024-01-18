@@ -14,20 +14,20 @@ app.post('/webhook', async (req, res) => {
     const request = req.body
 
     const call = {
-        employee: request["Funcionário"],
-        problem: request["Tipo do problema/solicitação"],
-        priority: request["Prioridade"],
-        place: request["Onde você se encontra?"],
-        client: request["Cliente:"],
-        tablets: request["Tablets:"],
-        thermal: request["Termovisores:"],
-        digital_measure: request["Trena Digital:"],
-        electric: request["Elétrica"],
-        civil: request["Civil"],
-        mechanic: request["Mecânica"],
-        epi: request["EPI'S"],
-        date: request["Data e hora da Retirada"],
-        description: request["Descrição:"]
+        employee: request["Funcionário"] || '',
+        problem: request["Tipo do problema/solicitação"] || '',
+        priority: request["Prioridade"] || 0,
+        place: request["Onde você se encontra?"] || '',
+        client: request["Cliente:"] || '',
+        tablets: request["Tablets:"] || [0],
+        thermal: request["Termovisores:"] || [0, 0, 0],
+        digital_measure: request["Trena Digital:"] || [0],
+        electric: request["Elétrica"] || [''],
+        civil: request["Civil"] || [''],
+        mechanic: request["Mecânica"] || [''],
+        epi: request["EPI'S"] || [''],
+        date: request["Data e hora da Retirada"] || '01/01/2001',
+        description: request["Descrição:"] || ''
     }
 
     const TrelloCard = await fetchApiTrello("cards", createCardInfo(call))
