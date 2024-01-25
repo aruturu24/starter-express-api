@@ -1,11 +1,13 @@
-# starter-express-api
+# Controle TI
 
-This is the simplest possible nodejs api using express that responds to any request with: 
-```
-Yo!
-```
+Uma API criada para gerenciar a demanda de TI da empresa BGF Consultoria em Engenharia.
 
-### Deploy it in 7 seconds: 
+---
 
-[![Deploy to Cyclic](https://deploy.cyclic.app/button.svg)](https://deploy.cyclic.app/)
+### Esta é uma versão antiga feita em NodeJS
+Atualmente estamos utilizando Deno.
+
+
+
+[<img alt="NodeJS icon" src="https://www.svgrepo.com/show/376337/node-js.svg" width="100px"/>](https://nodejs.org/)
 
